@@ -1,23 +1,12 @@
 import express from "express";
+import { createList, deleteList, getLists,updateList } from "../controllers/shoppingListController";
 
-import {
-  createOrUpdateShoppingList,
-  fetchShoppingLists,
-  fetchShoppingList,
-  removeShoppingList,
-} from "../controllers/shoppingListController";
 
 const router = express.Router();
 
-router.post(
-  "/",
-  createOrUpdateShoppingList
-);
-
-router.get("/", fetchShoppingLists);
-
-router.get("/:id", fetchShoppingList);
-
-router.delete("/:id", removeShoppingList);
+router.post("/", createList);
+router.get("/", getLists);
+router.delete("/:id", deleteList);
+router.put("/:id", updateList);
 
 export default router;

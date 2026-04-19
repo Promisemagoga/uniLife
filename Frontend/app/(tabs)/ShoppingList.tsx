@@ -1,139 +1,164 @@
-import { saveShoppingList } from "@/api/shopping";
-import { ShoppingItem } from "@/types/ShoppingItem";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   FlatList,
+  TouchableOpacity,
+  Button,
   StyleSheet,
+  Alert,
 } from "react-native";
 
-import uuid from "react-native-uuid";
+import {
+  createList,
+  getLists,
+  deleteList,
+  updateList,
+} from "../../api/lists";
 
+import { router } from "expo-router";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import TopBar from "@/components/TopBar";
 
-export default function ShoppingListsScreen() {
-  const [items, setItems] = useState<ShoppingItem[]>([]);
+export default function ListsScreen() {
+  const [lists, setLists] = useState<any[]>([]);
+  const [title, setTitle] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
+  const loadLists = async () => {
+    const data = await getLists();
+    setLists(data);
+  };
 
-  // ONE LIST ID PER LIST SESSION
-  const [listId] = useState(uuid.v4().toString());
+  useEffect(() => {
+    loadLists();
+  }, []);
 
-  async function addItem() {
-    if (!name || !price) return;
+  const addList = async () => {
+    if (!title) return;
 
-    const newItem: ShoppingItem = {
-      id: uuid.v4().toString(),
-      name,
-      price: Number(price),
-      checked: false,
-    };
+    await createList(title);
+    setTitle("");
+    loadLists();
+  };
 
-    const updatedItems = [...items, newItem];
+  const handleDelete = (id: number) => {
+    Alert.alert("Delete list?", "This cannot be undone", [
+      { text: "Cancel" },
+      {
+        text: "Delete",
+        onPress: async () => {
+          await deleteList(id);
+          loadLists();
+        },
+      },
+    ]);
+  };
 
-    setItems(updatedItems);
+  const handleUpdate = async () => {
+    if (!title || editingId === null) return;
 
-    const total = updatedItems.reduce((sum, item) => sum + item.price, 0);
+    await updateList(editingId, title);
 
-    const progress =
-      updatedItems.filter((i) => i.checked).length / updatedItems.length;
+    setEditingId(null);
+    setTitle("");
 
-    // SAVE TO DATABASE
-    await saveShoppingList({
-      id: listId,
-      title: "Groceries",
-      date: new Date(),
-      items: updatedItems,
-      total,
-      progress,
-    });
+    loadLists();
+  };
 
-    setName("");
-    setPrice("");
-  }
-
-  async function toggleItem(id: string) {
-    const updatedItems = items.map((item) =>
-      item.id === id
-        ? {
-            ...item,
-            checked: !item.checked,
-          }
-        : item,
-    );
-
-    setItems(updatedItems);
-
-    const total = updatedItems.reduce((sum, item) => sum + item.price, 0);
-
-    const progress =
-      updatedItems.filter((i) => i.checked).length / updatedItems.length;
-
-    await saveShoppingList({
-      id: listId,
-      title: "Groceries",
-      date: new Date(),
-      items: updatedItems,
-      total,
-      progress,
-    });
-  }
-
-  const total = items.reduce((sum, item) => sum + item.price, 0);
-
-  const progress =
-    items.length === 0
-      ? 0
-      : items.filter((i) => i.checked).length / items.length;
+  const toggleMenu = (id: number) => {
+    setOpenMenuId(openMenuId === id ? null : id);
+  };
 
   return (
+    <>
+      <TopBar text="Shopping Lists 🛒"/>
     <View style={styles.container}>
-      <Text style={styles.header}>Shopping List</Text>
-
       <TextInput
-        placeholder="Item name"
+        placeholder="List name"
+        value={title}
+        onChangeText={setTitle}
         style={styles.input}
-        value={name}
-        onChangeText={setName}
       />
 
-      <TextInput
-        placeholder="Price"
-        keyboardType="numeric"
-        style={styles.input}
-        value={price}
-        onChangeText={setPrice}
+      <Button
+        title={editingId ? "Update List" : "Add List"}
+        onPress={editingId ? handleUpdate : addList}
       />
-
-      <TouchableOpacity style={styles.button} onPress={addItem}>
-        <Text style={styles.btnText}>Add Item</Text>
-      </TouchableOpacity>
 
       <FlatList
-        data={items}
-        keyExtractor={(item) => item.id}
+        data={lists}
+        numColumns={2}
+        keyExtractor={(item) => item.id.toString()}
+        columnWrapperStyle={{ justifyContent: "space-between" }}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => toggleItem(item.id)}
-            style={styles.item}
-          >
-            <Text style={[styles.itemText, item.checked && styles.checked]}>
-              {item.name} - R{item.price}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.card}>
+            {/* NAVIGATE TO LIST */}
+            <TouchableOpacity
+              onPress={() => {
+                setOpenMenuId(null);
+                router.push(`/${item.id}`);
+              }}
+            >
+              <Text style={styles.title}>{item.title}</Text>
+
+              <Text style={styles.date}>
+                Created:{" "}
+                {new Date(item.created_at).toLocaleDateString()}
+              </Text>
+            </TouchableOpacity>
+
+            {/* ELLIPSIS BUTTON */}
+            <TouchableOpacity
+              onPress={() => toggleMenu(item.id)}
+              style={styles.menuButton}
+            >
+              <FontAwesome
+                name="ellipsis-v"
+                size={20}
+                color="grey"
+              />
+            </TouchableOpacity>
+
+            {/* ACTION MENU */}
+            {openMenuId === item.id && (
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setEditingId(item.id);
+                    setTitle(item.title);
+                    setOpenMenuId(null);
+                  }}
+                >
+                  <FontAwesome
+                    name="edit"
+                    size={20}
+                    color="#4CAF50"
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    handleDelete(item.id);
+                    setOpenMenuId(null);
+                  }}
+                >
+                  <FontAwesome
+                    name="trash"
+                    size={20}
+                    color="#E53935"
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         )}
       />
-
-      <Text style={styles.total}>Total: R{total}</Text>
-
-      <Text style={styles.progress}>
-        Progress:
-        {(progress * 100).toFixed(0)}%
-      </Text>
     </View>
+    </>
+    
   );
 }
 
@@ -144,50 +169,55 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 20,
+    marginBottom: 10,
   },
 
   input: {
     borderWidth: 1,
     padding: 10,
-    marginBottom: 10,
+    marginVertical: 10,
     borderRadius: 8,
   },
 
-  button: {
-    backgroundColor: "#2E86DE",
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 15,
+  card: {
+    flex: 1,
+    backgroundColor: "#fff",
+    margin: 8,
+    padding: 16,
+    borderRadius: 12,
+    position: "relative",
+
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+
+    elevation: 5,
   },
 
-  btnText: {
-    color: "white",
-    textAlign: "center",
-  },
-
-  item: {
-    padding: 10,
-  },
-
-  itemText: {
-    fontSize: 16,
-  },
-
-  checked: {
-    textDecorationLine: "line-through",
-    color: "gray",
-  },
-
-  total: {
+  title: {
     fontSize: 18,
-    marginTop: 20,
+    fontWeight: "600",
   },
 
-  progress: {
-    fontSize: 16,
+  date: {
+    fontSize: 12,
+    color: "gray",
     marginTop: 5,
+  },
+
+  actions: {
+    flexDirection: "row",
+    gap: 15,
+    marginTop: 10,
+  },
+
+  menuButton: {
+    position: "absolute",
+    top: 20,
+    right: 10,
+    marginRight:5
   },
 });

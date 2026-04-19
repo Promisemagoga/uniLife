@@ -1,6 +1,6 @@
-import API from "@/api/auth";
 import React, { useState } from "react";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
+import API from "../../api/auth";
 
 export default function RegisterScreen({ navigation }: any) {
   const [name, setName] = useState("");

@@ -10,8 +10,7 @@ import {
 import Button from "@/components/Button";
 import CustomText from "@/components/StyledText";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import API from "@/api/auth";
-
+import API from "../../api/auth";
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState("");

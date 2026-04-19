@@ -7,6 +7,8 @@ import userRoutes from "./routes/userRoutes";
 import dotenv from "dotenv";
 
 import shoppingListRoutes from "./routes/shoppingListRoutes";
+import shoppingItemRoutes from "./routes/shoppingItemRoute";
+
 
 dotenv.config();
 
@@ -19,9 +21,8 @@ app.use("/api/users", userRoutes);
 
 
 
-app.use(
-  "/api/shopping_lists",shoppingListRoutes
-);
+app.use("/api/shopping-lists", shoppingListRoutes);
+app.use("/api/items", shoppingItemRoutes);
 
 
 

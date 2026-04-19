@@ -1,5 +1,6 @@
-import { getSpendingSummary } from "@/api/tracker";
+
 import { View } from "@/components/Themed";
+import TopBar from "@/components/TopBar";
 import React, { useEffect, useState } from "react";
 import { ScrollView, Text, Dimensions, StyleSheet } from "react-native";
 import { PieChart } from "react-native-chart-kit";
@@ -23,18 +24,7 @@ export default function Home() {
 
   return (
     <ScrollView>
-      <Text
-        style={{
-          fontSize: 22,
-          backgroundColor: "#115eac",
-          padding: 50,
-          color: "#ffffff",
-          textAlign: "center",
-          marginBottom: 50,
-        }}
-      >
-        Spending Tracker 📊
-      </Text>
+      <TopBar text="Spending Tracker 📊"/>
 
       {/* <PieChart
         data={[

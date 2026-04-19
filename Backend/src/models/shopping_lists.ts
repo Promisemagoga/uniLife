@@ -1,70 +1,34 @@
 import pool from "../config/db";
 
-export const saveShoppingList = async (
-  id: string,
-  title: string,
-  date: Date,
-  items: any[],
-  total: number,
-  progress: number
-) => {
-  const result = await pool.query(
-    `
-    INSERT INTO shopping_lists
-    (id, title, date, items, total, progress)
-    VALUES ($1,$2,$3,$4,$5,$6)
+export const ShoppingListModel = {
+  create: async (title: string) => {
+    return pool.query(
+      "INSERT INTO shopping_lists (title) VALUES ($1) RETURNING *",
+      [title],
+    );
+  },
 
-    ON CONFLICT (id)
-    DO UPDATE SET
-      items = EXCLUDED.items,
-      total = EXCLUDED.total,
-      progress = EXCLUDED.progress
+  getAll: async () => {
+    return pool.query("SELECT * FROM shopping_lists ORDER BY created_at DESC");
+  },
 
-    RETURNING *
-    `,
-    [
-      id,
-      title,
-      date,
-      JSON.stringify(items),
-      total,
-      progress,
-    ]
-  );
+  delete: async (id: number) => {
+    return pool.query("DELETE FROM shopping_lists WHERE id = $1", [id]);
+  },
 
-  return result.rows[0];
-};
+  updateList: async (req: any, res: any) => {
+    const { id } = req.params;
+    const { title } = req.body;
 
-export const getShoppingLists = async () => {
-  const result = await pool.query(
-    `SELECT * FROM shopping_lists
-     ORDER BY date DESC`
-  );
+    try {
+      const result = await pool.query(
+        "UPDATE shopping_lists SET title = $1 WHERE id = $2 RETURNING *",
+        [title, id],
+      );
 
-  return result.rows;
-};
-
-export const getShoppingListById = async (
-  id: string
-) => {
-  const result = await pool.query(
-    `SELECT * FROM shopping_lists
-     WHERE id=$1`,
-    [id]
-  );
-
-  return result.rows[0];
-};
-
-export const deleteShoppingList = async (
-  id: string
-) => {
-  const result = await pool.query(
-    `DELETE FROM shopping_lists
-     WHERE id=$1
-     RETURNING *`,
-    [id]
-  );
-
-  return result.rows[0];
+      res.json(result.rows[0]);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
 };
